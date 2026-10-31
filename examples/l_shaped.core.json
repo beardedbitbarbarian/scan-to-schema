@@ -1,0 +1,29 @@
+{
+    "ID": "example-l-shaped",
+    "EntityType": "Room",
+    "Units": "meters",
+    "Shape": "L-Shape",
+    "Dimensions": { "Height": 2.6 },
+    "Walls": {
+        "Defaults": { "Thickness": 0.14 },
+        "Items": [
+            { "ID": "South",      "Orientation": 180, "Length": 3.6, "Confidence": 0.97 },
+            { "ID": "East",       "Orientation": 90,  "Length": 4.1, "Confidence": 0.95 },
+            { "ID": "North",      "Orientation": 0,   "Length": 2.4, "Confidence": 0.91 },
+            { "ID": "NotchWest",  "Orientation": 270, "Length": 0.8, "Confidence": 0.74 },
+            { "ID": "NotchNorth", "Orientation": 0,   "Length": 1.2, "Confidence": 0.78 },
+            { "ID": "West",       "Orientation": 270, "Length": 3.3, "Confidence": 0.93 }
+        ]
+    },
+    "Doors": [
+        { "WallID": "West", "Offset": 0.5, "Width": 0.76, "Height": 2.03, "Confidence": 0.88 }
+    ],
+    "Windows": [
+        { "WallID": "South", "Offset": 0.6, "Width": 0.9, "SillHeight": 0.8, "Height": 1.4, "Confidence": 0.82 },
+        { "WallID": "South", "Offset": 2.1, "Width": 0.9, "SillHeight": 0.8, "Height": 1.4, "Confidence": 0.79 }
+    ],
+    "Closets": [
+        { "WallID": "East", "Offset": 2.6, "Width": 1.4, "Depth": 0.6, "OpeningWidth": 1.2, "OpeningHeight": 2.1, "Confidence": 0.66 }
+    ],
+    "Confidence": 0.84
+}

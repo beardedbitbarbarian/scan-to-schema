@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.env
+# Never commit real scans
+data/private/
+*.ply
+*.obj
+*.glb
+!examples/**/*.glb

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scan-to-schema"
+version = "0.1.0"
+description = "Reconstruct structured room schemas from noisy 3D room scans, with a synthetic round-trip benchmark."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "All rights reserved" }
+dependencies = ["jsonschema>=4.18"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+geometry = ["numpy>=1.26", "trimesh>=4", "open3d>=0.18"]
+
+[project.scripts]
+s2s = "scan_to_schema.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+scan_to_schema = ["schema/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

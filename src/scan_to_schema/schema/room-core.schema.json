@@ -1,0 +1,134 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "room-core.schema.json",
+    "title": "Room (geometry core)",
+    "description": "Geometry-only projection of room-capture.schema.json: everything a scan can recover, nothing it can't. Field names and meanings match room-capture exactly, so a core document plus appearance data forms a full room-capture document. Adds optional Confidence (0..1) on the room and each element; absent means ground truth.",
+    "type": "object",
+    "required": ["ID", "EntityType", "Units", "Shape", "Walls"],
+    "additionalProperties": false,
+    "properties": {
+        "ID":         { "type": "string" },
+        "EntityType": { "type": "string", "const": "Room" },
+        "RoomType": {
+            "type": "string",
+            "enum": ["Bedroom", "Bathroom", "Kitchen", "Living Room", "Dining Room", "Office", "Hallway", "Garage", "Basement", "Laundry", "Closet", "Other"]
+        },
+        "FloorLevel": { "type": "integer", "minimum": 0 },
+        "Units":      { "type": "string", "enum": ["inches", "feet", "centimeters", "meters"] },
+        "Shape":      { "type": "string", "enum": ["Rectangle", "Square", "L-Shape", "Irregular"] },
+        "Dimensions": {
+            "type": "object",
+            "required": ["Height"],
+            "additionalProperties": false,
+            "properties": {
+                "Length": { "type": "number", "exclusiveMinimum": 0 },
+                "Width":  { "type": "number", "exclusiveMinimum": 0 },
+                "Height": { "type": "number", "exclusiveMinimum": 0 }
+            }
+        },
+        "Doors":    { "type": "array", "items": { "$ref": "#/$defs/Door" } },
+        "Windows":  { "type": "array", "items": { "$ref": "#/$defs/Window" } },
+        "Closets":  { "type": "array", "items": { "$ref": "#/$defs/Closet" } },
+        "Recesses": { "type": "array", "items": { "$ref": "#/$defs/Recess" } },
+        "Walls": {
+            "type": "object",
+            "required": ["Items"],
+            "additionalProperties": false,
+            "properties": {
+                "Defaults": { "$ref": "#/$defs/WallDefaults" },
+                "Items": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Wall" } }
+            }
+        },
+        "Confidence": { "$ref": "#/$defs/Confidence" }
+    },
+
+    "if":   { "properties": { "Shape": { "enum": ["Rectangle", "Square"] } }, "required": ["Shape"] },
+    "then": { "required": ["Dimensions"], "properties": { "Dimensions": { "required": ["Length", "Width", "Height"] } } },
+
+    "$defs": {
+        "Confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Reconstructor's belief that this element is correct. Omitted for ground truth."
+        },
+        "Door": {
+            "type": "object",
+            "required": ["Width", "Height", "WallID", "Offset"],
+            "additionalProperties": false,
+            "properties": {
+                "Type":       { "type": "string", "enum": ["Single", "Double", "Sliding", "Pocket", "Bifold", "French", "Barn"] },
+                "Width":      { "type": "number", "exclusiveMinimum": 0 },
+                "Height":     { "type": "number", "exclusiveMinimum": 0 },
+                "WallID":     { "type": "string" },
+                "Offset":     { "type": "number", "minimum": 0 },
+                "Confidence": { "$ref": "#/$defs/Confidence" }
+            }
+        },
+        "Window": {
+            "type": "object",
+            "required": ["SillHeight", "Width", "Height", "WallID", "Offset"],
+            "additionalProperties": false,
+            "properties": {
+                "Type":       { "type": "string", "enum": ["Single-Hung", "Double-Hung", "Casement", "Sliding", "Fixed", "Awning", "Bay", "Skylight"] },
+                "SillHeight": { "type": "number", "minimum": 0 },
+                "Width":      { "type": "number", "exclusiveMinimum": 0 },
+                "Height":     { "type": "number", "exclusiveMinimum": 0 },
+                "WallID":     { "type": "string" },
+                "Offset":     { "type": "number", "minimum": 0 },
+                "Confidence": { "$ref": "#/$defs/Confidence" }
+            }
+        },
+        "Closet": {
+            "type": "object",
+            "required": ["WallID", "Offset", "Width", "Depth", "OpeningWidth", "OpeningHeight"],
+            "additionalProperties": false,
+            "properties": {
+                "WallID":          { "type": "string" },
+                "Offset":          { "type": "number", "minimum": 0 },
+                "Width":           { "type": "number", "exclusiveMinimum": 0 },
+                "Depth":           { "type": "number", "exclusiveMinimum": 0 },
+                "OpeningWidth":    { "type": "number", "exclusiveMinimum": 0 },
+                "OpeningHeight":   { "type": "number", "exclusiveMinimum": 0 },
+                "OpeningCentered": { "type": "boolean", "default": true },
+                "OpeningOffset":   { "type": "number", "minimum": 0 },
+                "Confidence":      { "$ref": "#/$defs/Confidence" }
+            }
+        },
+        "Recess": {
+            "type": "object",
+            "required": ["WallID", "Offset", "Width", "Depth", "Height"],
+            "additionalProperties": false,
+            "properties": {
+                "WallID":       { "type": "string" },
+                "Offset":       { "type": "number", "minimum": 0 },
+                "Width":        { "type": "number", "exclusiveMinimum": 0 },
+                "Depth":        { "type": "number", "exclusiveMinimum": 0 },
+                "BottomHeight": { "type": "number", "minimum": 0, "default": 0 },
+                "Height":       { "type": "number", "exclusiveMinimum": 0 },
+                "Confidence":   { "$ref": "#/$defs/Confidence" }
+            }
+        },
+        "WallDefaults": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "Thickness": { "type": "number", "exclusiveMinimum": 0 }
+            }
+        },
+        "Wall": {
+            "type": "object",
+            "required": ["ID", "Orientation", "Length"],
+            "additionalProperties": false,
+            "properties": {
+                "ID":          { "type": "string" },
+                "Orientation": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
+                "Length":      { "type": "number", "exclusiveMinimum": 0 },
+                "Height":      { "type": "number", "exclusiveMinimum": 0 },
+                "Open":        { "type": "boolean", "default": false },
+                "Thickness":   { "type": "number", "exclusiveMinimum": 0 },
+                "Confidence":  { "$ref": "#/$defs/Confidence" }
+            }
+        }
+    }
+}

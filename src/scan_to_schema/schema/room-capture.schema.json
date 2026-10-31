@@ -1,0 +1,235 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "room-capture.schema.json",
+    "title": "Room",
+    "type": "object",
+    "required": ["ID", "EntityType", "RoomType", "FloorLevel", "Units", "Shape", "Flooring", "Ceiling", "Walls"],
+    "properties": {
+        "ID": {
+            "type": "string",
+            "description": "Unique identifier or human-readable name for the room"
+        },
+        "EntityType": {
+            "type": "string",
+            "const": "Room"
+        },
+        "RoomType": {
+            "type": "string",
+            "enum": ["Bedroom", "Bathroom", "Kitchen", "Living Room", "Dining Room", "Office", "Hallway", "Garage", "Basement", "Laundry", "Closet", "Other"]
+        },
+        "FloorLevel": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0 = ground floor, 1 = first floor above ground, etc."
+        },
+        "Units": {
+            "type": "string",
+            "enum": ["inches", "feet", "centimeters", "meters"],
+            "description": "Unit of measure applied to all numeric measurements in this document"
+        },
+        "Shape": {
+            "type": "string",
+            "enum": ["Rectangle", "Square", "L-Shape", "Irregular"]
+        },
+        "Dimensions": {
+            "type": "object",
+            "$comment": "Length and Width are required for Rectangle and Square rooms (enforced by if/then below). L-Shape and Irregular rooms derive their floor plan from Walls.Items and only need Height here; Height itself is optional when all wall items carry a Height field.",
+            "required": ["Height"],
+            "additionalProperties": false,
+            "properties": {
+                "Length": { "type": "number", "exclusiveMinimum": 0 },
+                "Width":  { "type": "number", "exclusiveMinimum": 0 },
+                "Height": { "type": "number", "exclusiveMinimum": 0 }
+            }
+        },
+        "Flooring": {
+            "type": "string",
+            "enum": ["Hardwood", "Carpet", "Tile", "Laminate", "Vinyl", "Concrete", "Stone", "Cork", "Other"]
+        },
+        "Ceiling": {
+            "type": "object",
+            "required": ["Type", "Material", "Color"],
+            "additionalProperties": false,
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "enum": ["Flat", "Vaulted", "Coffered", "Tray", "Beamed", "Exposed"]
+                },
+                "Material": { "type": "string" },
+                "Color": { "$ref": "#/$defs/Color" }
+            }
+        },
+        "Doors": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/Door" }
+        },
+        "Windows": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/Window" }
+        },
+        "Closets": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/Closet" }
+        },
+        "Recesses": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/Recess" }
+        },
+        "Walls": {
+            "type": "object",
+            "required": ["Defaults", "Items"],
+            "additionalProperties": false,
+            "properties": {
+                "Defaults": { "$ref": "#/$defs/WallDefaults" },
+                "Items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "$ref": "#/$defs/Wall" }
+                }
+            }
+        }
+    },
+
+    "if": {
+        "properties": { "Shape": { "enum": ["Rectangle", "Square"] } },
+        "required": ["Shape"]
+    },
+    "then": {
+        "required": ["Dimensions"],
+        "properties": {
+            "Dimensions": { "required": ["Length", "Width", "Height"] }
+        }
+    },
+
+    "$defs": {
+        "Color": {
+            "type": "object",
+            "required": ["Name"],
+            "additionalProperties": false,
+            "properties": {
+                "Name": { "type": "string" },
+                "Hex": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}$",
+                    "description": "Optional hex color code. Omit for non-representable values such as transparent or clear."
+                }
+            }
+        },
+
+        "Door": {
+            "type": "object",
+            "required": ["Type", "Swing", "Material", "Color", "Width", "Height", "WallID", "Offset"],
+            "additionalProperties": false,
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "enum": ["Single", "Double", "Sliding", "Pocket", "Bifold", "French", "Barn"]
+                },
+                "Swing": {
+                    "type": "string",
+                    "enum": ["Inward", "Outward"]
+                },
+                "HingePosition": {
+                    "type": "string",
+                    "enum": ["Left", "Right"],
+                    "description": "Hinge side when viewed from outside the room. Optional."
+                },
+                "Material": { "type": "string" },
+                "Color":    { "$ref": "#/$defs/Color" },
+                "Width":    { "type": "number", "exclusiveMinimum": 0 },
+                "Height":   { "type": "number", "exclusiveMinimum": 0 },
+                "WallID":   { "type": "string", "description": "References Wall.ID in Walls.Items" },
+                "Offset":   { "type": "number", "minimum": 0, "description": "Distance from the left edge of the wall to the left edge of the door" }
+            }
+        },
+
+        "Window": {
+            "type": "object",
+            "required": ["Type", "Material", "SillHeight", "Color", "Width", "Height", "WallID", "Offset"],
+            "additionalProperties": false,
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "enum": ["Single-Hung", "Double-Hung", "Casement", "Sliding", "Fixed", "Awning", "Bay", "Skylight"]
+                },
+                "Material":    { "type": "string" },
+                "SillHeight":  { "type": "number", "minimum": 0, "description": "Distance from floor to bottom of window" },
+                "Color":       { "$ref": "#/$defs/Color" },
+                "Width":       { "type": "number", "exclusiveMinimum": 0 },
+                "Height":      { "type": "number", "exclusiveMinimum": 0 },
+                "WallID":      { "type": "string", "description": "References Wall.ID in Walls.Items" },
+                "Offset":      { "type": "number", "minimum": 0, "description": "Distance from the left edge of the wall to the left edge of the window" }
+            }
+        },
+
+        "Closet": {
+            "type": "object",
+            "required": ["WallID", "Offset", "Width", "Depth", "OpeningWidth", "OpeningHeight"],
+            "additionalProperties": false,
+            "properties": {
+                "WallID":          { "type": "string", "description": "References Wall.ID in Walls.Items" },
+                "Offset":          { "type": "number", "minimum": 0, "description": "Distance from the left edge of the wall to the left edge of the closet interior" },
+                "Width":           { "type": "number", "exclusiveMinimum": 0, "description": "Interior width of the closet" },
+                "Depth":           { "type": "number", "exclusiveMinimum": 0, "description": "Interior depth of the closet (perpendicular to the wall, away from the room)" },
+                "OpeningWidth":    { "type": "number", "exclusiveMinimum": 0, "description": "Width of the opening (door hole) in the wall face" },
+                "OpeningHeight":   { "type": "number", "exclusiveMinimum": 0, "description": "Height of the opening (door hole) in the wall face, from floor up" },
+                "OpeningCentered": { "type": "boolean", "default": true, "description": "Whether the opening is horizontally centered within the closet width" },
+                "OpeningOffset":   { "type": "number", "minimum": 0, "description": "Distance from the left edge of the closet to the left edge of the opening. Required when OpeningCentered is false." },
+                "Material":        { "type": "string", "description": "Interior surface material. Defaults to Walls.Defaults.Material." },
+                "Color":           { "$ref": "#/$defs/Color" }
+            }
+        },
+
+        "Recess": {
+            "type": "object",
+            "required": ["WallID", "Offset", "Width", "Depth", "Height"],
+            "additionalProperties": false,
+            "properties": {
+                "WallID":       { "type": "string", "description": "References Wall.ID in Walls.Items" },
+                "Offset":       { "type": "number", "minimum": 0, "description": "Distance from the left edge of the wall to the left edge of the recess" },
+                "Width":        { "type": "number", "exclusiveMinimum": 0, "description": "Horizontal extent of the recess opening and interior" },
+                "Depth":        { "type": "number", "exclusiveMinimum": 0, "description": "How far the recess penetrates into the wall thickness" },
+                "BottomHeight": { "type": "number", "minimum": 0, "default": 0, "description": "Distance from the room floor to the bottom of the recess. 0 = floor-level (e.g. kick space). Positive values produce a raised sill (e.g. medicine cabinet, shelving niche)." },
+                "Height":       { "type": "number", "exclusiveMinimum": 0, "description": "Vertical extent of the recess from BottomHeight up" },
+                "Material":     { "type": "string", "description": "Interior surface material. Defaults to Walls.Defaults.Material." },
+                "Color":        { "$ref": "#/$defs/Color" }
+            }
+        },
+
+        "WallDefaults": {
+            "type": "object",
+            "description": "Default values applied to all walls unless overridden on the individual wall",
+            "additionalProperties": false,
+            "properties": {
+                "Material":  { "type": "string" },
+                "Color":     { "$ref": "#/$defs/Color" },
+                "Thickness": { "type": "number", "exclusiveMinimum": 0 }
+            }
+        },
+
+        "Wall": {
+            "type": "object",
+            "required": ["ID", "Orientation", "Length"],
+            "additionalProperties": false,
+            "$comment": "Height is required on at least one non-open wall so room height can be determined. Open walls may omit Height.",
+            "properties": {
+                "ID": {
+                    "type": "string",
+                    "description": "Unique wall identifier within this room, e.g. North, East, South, West"
+                },
+                "Orientation": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMaximum": 360,
+                    "description": "Compass bearing the wall faces outward, in degrees. 0=North, 90=East, 180=South, 270=West."
+                },
+                "Length":    { "type": "number", "exclusiveMinimum": 0 },
+                "Height":    { "type": "number", "exclusiveMinimum": 0 },
+                "Open":      { "type": "boolean", "default": false, "description": "When true, no wall surface is generated for this edge. The opening is a pass-through to an adjacent space (e.g. hallway end, archway). Thickness is ignored for open walls." },
+                "Material":  { "type": "string", "description": "Overrides Walls.Defaults.Material if set" },
+                "Color":     { "$ref": "#/$defs/Color" },
+                "Thickness": { "type": "number", "exclusiveMinimum": 0, "description": "Overrides Walls.Defaults.Thickness if set" }
+            }
+        }
+    }
+}
