@@ -76,6 +76,7 @@ src/scan_to_schema/
 │   ├── walls.py         wall planes → 2D lines → footprint            (M3)
 │   ├── openings.py      per-wall evidence maps → elements            (M4)
 │   ├── confidence.py    evidence features → calibrated scores         (M6)
+│   ├── appearance.py    surface colour, floor class, trim profiles    (M8)
 │   └── export.py        recon result → room-core document             (M3)
 ├── eval/
 │   ├── align.py         reconstruction-to-truth alignment             (M5)
@@ -95,7 +96,8 @@ Dependency direction is strictly downward: `recon` may import `geometry`, `types
 
 - **room-core** is the only document format: the reconstructor's output and the synthetic generator's ground truth. Ground truth omits `Confidence`; reconstructions include it.
 - room-core is a frozen v0.1 contract. Fields are not renamed, removed, or redefined without a version bump recorded here.
-- Appearance is out of scope. Consumers that need materials or colours map room-core into their own formats; adapters live with the consumer, not in this repo.
+- **Format growth rule.** room-core grows only with things a scan can *measure* about a room: dimensions, colours as captured, floor material class, trim geometry. Choices about how a consumer *builds or styles* a room (materials, fixture models, door swing defaults) never enter room-core. Consumers map room-core into their own formats, and those adapters live with them, not in this repo. New fields are additive and bump the minor version.
+- v0.1 is geometry only. Measured appearance arrives in v0.2 (M8, section 6.7).
 - Every document written by any stage passes `validate_room()`. Stages that cannot produce a valid room raise rather than emit an invalid one.
 
 ### 4.2 In-memory types (`types.py`)
@@ -107,6 +109,7 @@ class PointCloud:
     normals: np.ndarray | None     # (N, 3) unit vectors, or None
     labels: np.ndarray | None      # (N,) int32 semantic label ids; synthetic only
     instance: np.ndarray | None    # (N,) int32 element ids (which wall / opening); synthetic only
+    colors: np.ndarray | None      # (N, 3) float32 linear RGB in [0, 1], or None (used from M8)
 
 @dataclass(frozen=True)
 class Plane:
@@ -268,6 +271,15 @@ Every wall and element carries evidence features (support ratio, inlier RMS, cov
 - A wall whose evidence says "no surface, but floor continues" is exported with `Open: true`.
 - The output is passed through `validate_room()` before return. A failure there is a reconstructor bug, not a user error, and raises.
 
+### 6.7 Measured appearance (M8, post-v1)
+
+Runs after export geometry is final, using point colours when the input has them.
+
+- **White balance.** Estimate a per-scan correction from surfaces expected to be near-neutral (ceiling first, then the brightest large wall), and apply it before any colour is measured.
+- **Surface colour.** For each wall, the floor, and the ceiling, take the robust median colour of its plane inliers, excluding points near openings and clutter. Confidence falls with colour spread and lighting gradient across the surface.
+- **Floor class.** Colour and texture statistics of floor points (variance, dominant spatial frequency, regularity of seams) feed a small classifier trained on synthetic floors and calibrated like section 6.5.
+- **Trim.** For each wall, build a height profile of points slightly proud of the wall plane (a few millimetres to a few centimetres). A consistent band at the floor is a baseboard, one at the ceiling is crown, and one at mid-height is a chair rail. Height and depth come from the band's extent; trim colour from its points.
+
 ## 7. Evaluation (`eval/`)
 
 ### 7.1 Alignment
@@ -333,3 +345,4 @@ Core algorithms (RANSAC, histograms, evidence maps) are written against numpy an
 | D8 | Openings require positive evidence, not just absence | Absence alone cannot separate doorways from scan holes | Gap-only detection |
 | D9 | Confidence calibrated on benchmark results | Scores mean something measurable | Uncalibrated heuristics |
 | D10 | Regression gate with a committed baseline | Accuracy changes are explicit and reviewed | Manual comparison |
+| D11 | Grow room-core only with measured facts, never styling | Every field is something the tool can be scored on, and the format stays consumer-neutral | Mirroring a consumer's full format |

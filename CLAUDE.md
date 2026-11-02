@@ -4,7 +4,7 @@ Context for any Claude Code session working in this repo.
 
 ## What this is
 
-Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 3D room scans. Output is **room-core**, a geometry-only JSON format this project defines (`schema/room-core.schema.json`). Progress is measured by a synthetic round-trip benchmark: generate a room with known ground truth, simulate a degraded scan, reconstruct, score. Before starting work, read docs/plan.md (scope, success criteria, per-milestone acceptance criteria) and docs/architecture.md (module layout, data contracts, algorithms, design decisions D1–D10). Work through milestones in order; a milestone is done when its acceptance criteria pass. If a change contradicts a design decision, update the decision table in the same commit and say why.
+Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 3D room scans. Output is **room-core**, a geometry-only JSON format this project defines (`schema/room-core.schema.json`). Progress is measured by a synthetic round-trip benchmark: generate a room with known ground truth, simulate a degraded scan, reconstruct, score. Before starting work, read docs/plan.md (scope, success criteria, per-milestone acceptance criteria) and docs/architecture.md (module layout, data contracts, algorithms, design decisions D1–D11). Work through milestones in order; a milestone is done when its acceptance criteria pass. If a change contradicts a design decision, update the decision table in the same commit and say why.
 
 ## Format conventions (load-bearing; room-core is a stable contract)
 
@@ -22,7 +22,7 @@ Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 
 
 - `schema/room-core.schema.json` is the only schema here: geometry only, plus optional `Confidence` (0..1) on the room and each element.
 - It is a frozen v0.1 contract. Don't rename or remove fields, or change their meaning, without a version bump and a note in docs/architecture.md.
-- Appearance (materials, colours, door swing, flooring) is out of scope. Consumers that need it map room-core into their own formats; that mapping lives with them, not here.
+- **Growth rule (D11):** room-core only grows with things a scan can *measure* (dimensions, captured colour, floor class, trim geometry). Styling choices (materials, fixture models, door swing defaults) never go in; consumers map room-core into their own formats, and that mapping lives with them. New fields are additive and bump the minor version. v0.1 is geometry only; measured appearance is M8.
 
 ## Data policy
 

@@ -21,7 +21,8 @@ Phone-based photogrammetry and LiDAR apps produce room meshes that look right bu
 | Sloped, vaulted, or multi-level ceilings | The output format's geometry assumes flat ceilings |
 | Curved walls, arched openings | Not representable in the output format |
 | Furniture recognition | Furniture is clutter to be ignored, not an output |
-| Appearance (materials, colours, flooring) | Not reliably recoverable from geometry; core format omits it |
+| Measured appearance in v1 (surface colours, floor material, trim) | Deferred to M8, not dropped |
+| Styling (materials, fixture models, door swing defaults) | Not measurements; never part of room-core (format growth rule, architecture §4.1) |
 | Stairs | Requires multi-level support |
 | True compass bearings without a supplied heading | A scan has no compass (architecture §2) |
 | Real-time or on-device processing | Batch, offline tool |
@@ -183,10 +184,32 @@ M5 can start alongside M3. A minimal footprint-and-height evaluator is needed by
 - Overlay generated for every room in a benchmark run on request
 - Manual review checklist in the docs
 
+### M8: Measured appearance (post-v1, M)
+
+**Scope:** extend room-core to v0.2, additively, with appearance a scan can measure:
+
+- Per-surface colour (each wall, floor, ceiling, trim) as captured, in sRGB, with confidence
+- Floor material class (carpet, wood, tile, other), with confidence
+- Trim geometry: baseboard and crown height and depth, chair-rail height, per wall where present
+
+**Deliverables**
+
+- room-core v0.2 schema; every v0.1 document stays valid
+- Synthetic generator: per-surface base colours, floor textures per class, trim profiles. Scan simulator: colour sampling with lighting variation (brightness, colour temperature, shadow)
+- Metrics: colour error (CIEDE2000 ΔE), floor-class accuracy, trim dimension error, trim false positives
+
+**Acceptance**
+
+- `clean` profile: wall colour ΔE ≤ 5, floor class accuracy ≥ 95%, trim height error ≤ 1 cm
+- `phone` profile under varied lighting: wall colour ΔE ≤ 10, floor class accuracy ≥ 85%, trim height error ≤ 2 cm, trim reported on trimless walls in ≤ 5% of cases
+- All v0.1 tests and regression gates unchanged
+
+**Main risk:** captured colour depends on lighting and camera white balance as much as on paint. Mitigation: estimate white balance per scan from neutral surfaces (ceilings are usually near-white), lower colour confidence under uneven light, and define colour as "as captured," not paint-matched.
+
 ## 8. Sequencing
 
 ```
-M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M6 ──► M7
+M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M6 ──► M7 ┄┄► M8   (M8 is post-v1)
                       │      ▲
                       └► M5 ─┘   (M5 starts with M3; gate is live before M4)
 ```
@@ -202,6 +225,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M6 ──► M7
 | Non-Manhattan rooms | Low | Medium | Unconstrained fallback; flagged with lower confidence |
 | Optional heavy dependency (Open3D) lags Python releases | Medium | Low | Core path is numpy/scipy only; Open3D behind an extra |
 | Benchmark overfitting: tuning to the suite rather than the problem | Medium | Medium | Separate held-out seeds that are never used for tuning |
+| Captured colour reflects lighting more than paint (M8) | High | Medium | Per-scan white balance from neutral surfaces; colour confidence; "as captured" semantics |
 
 ## 10. Open questions
 

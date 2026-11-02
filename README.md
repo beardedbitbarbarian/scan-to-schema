@@ -35,6 +35,7 @@ Every change to the reconstructor is measured against the same benchmark, so pro
 | M5 | Evaluation harness, metrics report, CI regression gates | |
 | M6 | Robustness: non-rectangular rooms, heavy clutter, confidence scores, real mesh input | |
 | M7 | Round-trip rebuild and visual diff overlay | |
+| M8 | Measured appearance: surface colours, floor material, trim (post-v1) | |
 
 Details: [architecture](docs/architecture.md) covers how it's built; [plan and spec](docs/plan.md) covers scope, success criteria, and acceptance criteria per milestone.
 
@@ -58,7 +59,7 @@ Output is **room-core**, a small geometry-only JSON format defined by this proje
 }
 ```
 
-room-core describes only what a scan can recover. Appearance (materials, colours, door swing) is out of scope; tools that need it map room-core into their own richer formats.
+room-core describes only what a scan can measure. Measured appearance (surface colours, floor material, trim) is planned for M8. Styling choices such as materials and door swing stay with the tools that consume room-core.
 
 **Frame:** right-handed, +Y up, +X east, −Z north, with plan coordinates (x, z) equal to glTF x and z. `Orientation` is the compass bearing a wall faces outward. Walls are listed clockwise on a north-up map (north, east, south, west for a box), starting at the origin.
 
