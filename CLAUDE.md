@@ -26,8 +26,12 @@ Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 
 - Develop and test **only** on synthetic rooms and openly licensed public datasets.
 - Never commit real scans or real room measurements. `.gitignore` blocks common mesh formats; keep it that way.
 - Example files use fictional dimensions.
+- Keep committed files self-contained: no references to other projects, people, real places, or local machine paths. Refer to the consumer of the output only as "the downstream room-to-GLB generator."
+- This is a sole-author project; don't add contributors or vendor third-party code without asking.
 
 ## Commands
+
+Use Python 3.10–3.12 (matches CI; heavier geometry dependencies lag newer releases).
 
 ```bash
 pip install -e ".[dev]"
