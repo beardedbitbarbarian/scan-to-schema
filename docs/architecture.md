@@ -42,17 +42,17 @@ These apply everywhere and match the `room-capture` format consumed downstream.
 | Topic | Convention |
 |---|---|
 | Units | Metres internally. Documents may use any `room-capture` unit; convert on load and on export. |
-| 3D frame | **+Y up**, +X east, +Z north, matching the downstream format. Floor at y = 0 after framing. This axis set is left-handed, so anything written to glTF (which is right-handed) maps north to −Z; see §5.2. |
+| 3D frame | Right-handed, **+Y up**. Plan coordinates (x, z) are the glTF x and z axes directly, as the downstream generator writes them. In a top-down view with +X to the right, +Z points *down* the screen. Floor at y = 0 after framing. |
 | Plan frame | 2D points are (x, z). |
-| Wall order | `Walls.Items` counter-clockwise viewed from above; wall *i* is polygon edge *i*. The first wall starts at the origin. |
-| Orientation | Compass bearing of the wall's outward face. A wall facing bearing *b* runs in direction (−cos *b*, sin *b*). |
+| Wall order | `Walls.Items` in positive (counter-clockwise) order in the (x, z) plane: positive signed area with x as the first axis. In a top-down view (+X right, +Z down) this order runs clockwise. Wall *i* is polygon edge *i*. The first wall starts at the origin. |
+| Orientation | Bearing of the wall's outward face. A wall facing bearing *b* runs in direction (−cos *b*, sin *b*). Bearings label document-frame directions (0 "north" = +z, 90 "east" = +x); they are not true compass directions, since in a right-handed Y-up frame with +x east, +z is south. |
 | Offset | Distance along a wall from its start vertex to the near edge of the element. |
 | Normals | Interior surfaces face into the room. |
 | Randomness | Every random choice takes an explicit `numpy.random.Generator`. Same seed, same output, on every platform. |
 
 ### North is not observable
 
-A scan has no compass. After Manhattan alignment the reconstructor knows the room's axes only up to a 90° rotation. The exporter therefore picks a deterministic frame: the dominant wall axis becomes the x axis, and the first wall is the one starting at the footprint's minimum-(z, x) corner. If a caller supplies a heading (for example, from phone metadata), the exporter rotates into true bearings instead.
+A scan has no compass. After Manhattan alignment the reconstructor knows the room's axes only up to a 90° rotation. The exporter therefore picks a deterministic frame: the dominant wall axis becomes the x axis, and the first wall is the one starting at the footprint's minimum-(z, x) corner. Mapping to true compass directions would need a supplied heading (for example, from phone metadata) plus the label reflection noted under Orientation, so it is deferred.
 
 Consequence for evaluation: scores are computed after aligning the reconstruction to ground truth (section 7.1), never in raw coordinates.
 
@@ -177,7 +177,7 @@ Generated artifacts are never committed. Tests generate small fixtures at run ti
 - An exterior backdrop (large box) so rays through windows and doors hit something labelled `exterior`.
 - Optional clutter: axis-aligned and rotated boxes (beds, dressers, shelves) placed against and away from walls, labelled `clutter`.
 
-**GLB export** writes glTF coordinates as (x, y, −z_north). glTF is right-handed with +Y up, so writing plan z directly would produce a mirror image of the room. A test checks the mapping: in the exported file, a window on the east wall must lie on +X, and the north wall must lie on −Z.
+**GLB export** writes plan coordinates unchanged: plan (x, y, z) is glTF (x, y, z), matching the downstream generator. Never negate a single axis; that mirrors the room. A chirality test builds an asymmetric room (an L with its notch at a known corner) and checks the notch sits at the same (x, z) in the exported file.
 
 This builder is deliberately independent of any downstream generator. It only needs to be geometrically correct and labelled, not production quality.
 

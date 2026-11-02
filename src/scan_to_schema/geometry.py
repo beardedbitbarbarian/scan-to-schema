@@ -1,9 +1,10 @@
 """Turn a room document's wall chain into plan geometry.
 
-Frame matches the downstream room-to-GLB generator: plan coordinates are (x, z) with
-+X = east, +Z = north (+Y is up), metres. A wall's Orientation is the compass bearing
-of its outward face (0 = north, 90 = east). Walking the footprint
-counter-clockwise (interior on the left), a wall facing bearing b runs in
+Frame matches the downstream room-to-GLB generator: right-handed, +Y up, metres,
+with plan coordinates (x, z) equal to glTF x and z. A wall's Orientation is the
+bearing of its outward face in document-frame labels (0 "north" = +z, 90 "east"
+= +x; not true compass directions). Walking the footprint in positive order in
+the (x, z) plane (interior on the left), a wall facing bearing b runs in
 direction (-cos b, sin b): the outward normal turned 90 degrees to the left. The room's inward face is
 then the left perpendicular of each run, as in the generator.
 
