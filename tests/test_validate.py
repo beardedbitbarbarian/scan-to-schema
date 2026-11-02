@@ -141,9 +141,11 @@ def test_walls_must_close(full):
     assert "don't close" in messages(full)
 
 
-def test_small_closure_gap_tolerated(core):
-    wall(core, "East")["Length"] += 0.004  # scanner-grade error
+def test_closure_matches_downstream_tolerance(core):
+    wall(core, "East")["Length"] += 0.0005  # within 0.001 document units
     assert validate_room(core) == []
+    wall(core, "East")["Length"] += 0.004  # the downstream generator rejects this
+    assert "don't close" in messages(core)
 
 
 def test_outward_facing_matters(full):
@@ -174,12 +176,19 @@ def test_rectangle_with_wrong_wall_count(core):
 
 def test_dimensions_must_match_walls(full):
     full["Dimensions"]["Length"] = 14
-    assert "don't match the walls" in messages(full)
+    assert "[Width, Length, Width, Length]" in messages(full)
+
+
+def test_rectangle_walls_start_with_width(full):
+    # Width runs along x and is the first edge; swapping Length/Width breaks that.
+    d = full["Dimensions"]
+    d["Length"], d["Width"] = d["Width"], d["Length"]
+    assert "[Width, Length, Width, Length]" in messages(full)
 
 
 def test_square_needs_equal_sides(full):
     full["Shape"] = "Square"
-    assert "Square has sides" in messages(full)
+    assert "Square has Length" in messages(full)
 
 
 def test_l_shape_needs_one_inside_corner(full):

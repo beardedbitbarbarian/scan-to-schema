@@ -205,7 +205,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M6 ──► M7
 
 ## 10. Open questions
 
-1. **Rectangle `Length` vs `Width`.** The validator is order-agnostic. The exporter will write `Length` as the extent along the first wall until a downstream convention is confirmed.
+1. ~~**Rectangle `Length` vs `Width`.**~~ Resolved: `Width` is the x extent, `Length` the z extent, and rectangle walls are listed `[Width, Length, Width, Length]` starting from the edge along +x. Enforced by the validator.
 2. **Open walls.** When should a missing wall be exported as `Open: true` rather than a very wide opening? Proposed rule: no wall surface along more than 90% of the edge, with floor continuing beyond it.
 3. **Capture poses.** Some apps export camera poses. If available, they make the `seen` evidence (architecture §6.4) exact. Worth supporting as an optional input in M6?
 4. **Held-out set size.** How many held-out seeds per tier are enough to make the hold-out meaningful without slowing the full suite?

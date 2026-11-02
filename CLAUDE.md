@@ -12,6 +12,9 @@ Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 
 - **Orientation** is the compass bearing a wall's *outward* face points: 0 = north, 90 = east.
 - **Walls.Items are listed counter-clockwise viewed from above.** Wall list index *is* the polygon edge index downstream. A wall facing bearing b runs in direction (-cos b, sin b). The first wall starts at the origin.
 - **Offset** is the distance along a wall's edge from its *start* vertex (`geometry.OFFSET_FROM = "start"`). Openings occupy [Offset, Offset + Width] along the edge.
+- **Rectangles/Squares** are built downstream from `Dimensions` alone: `Width` = x extent, `Length` = z extent, walls listed `[Width, Length, Width, Length]` starting with the edge along +x.
+- **Closure:** wall chains must close within 0.001 document units (the downstream limit). Derive lengths from rounded vertices; never round lengths independently.
+- **glTF export** maps plan z (north) to glTF −Z; the plan frame is left-handed and glTF is right-handed.
 - Doors start at the floor. Windows have SillHeight > 0. Closet openings are centred in the closet's interior Width unless `OpeningCentered` is false, in which case `OpeningOffset` is required. Recess Depth may equal, but not exceed, wall thickness.
 - Interior faces have inward normals (left perpendicular of each CCW edge).
 

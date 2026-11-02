@@ -11,10 +11,10 @@
     "Walls": {
         "Defaults": { "Material": "Drywall", "Color": { "Name": "Pale Blue", "Hex": "#C9DCEB" }, "Thickness": 0.4 },
         "Items": [
-            { "ID": "South", "Orientation": 180, "Length": 12 },
-            { "ID": "East",  "Orientation": 90,  "Length": 10 },
-            { "ID": "North", "Orientation": 0,   "Length": 12 },
-            { "ID": "West",  "Orientation": 270, "Length": 10 }
+            { "ID": "South", "Orientation": 180, "Length": 10 },
+            { "ID": "East",  "Orientation": 90,  "Length": 12 },
+            { "ID": "North", "Orientation": 0,   "Length": 10 },
+            { "ID": "West",  "Orientation": 270, "Length": 12 }
         ]
     },
     "Doors": [

@@ -42,7 +42,7 @@ These apply everywhere and match the `room-capture` format consumed downstream.
 | Topic | Convention |
 |---|---|
 | Units | Metres internally. Documents may use any `room-capture` unit; convert on load and on export. |
-| 3D frame | Right-handed. **+Y up**, +X east, +Z north. Floor at y = 0 after framing. |
+| 3D frame | **+Y up**, +X east, +Z north, matching the downstream format. Floor at y = 0 after framing. This axis set is left-handed, so anything written to glTF (which is right-handed) maps north to −Z; see §5.2. |
 | Plan frame | 2D points are (x, z). |
 | Wall order | `Walls.Items` counter-clockwise viewed from above; wall *i* is polygon edge *i*. The first wall starts at the origin. |
 | Orientation | Compass bearing of the wall's outward face. A wall facing bearing *b* runs in direction (−cos *b*, sin *b*). |
@@ -177,6 +177,8 @@ Generated artifacts are never committed. Tests generate small fixtures at run ti
 - An exterior backdrop (large box) so rays through windows and doors hit something labelled `exterior`.
 - Optional clutter: axis-aligned and rotated boxes (beds, dressers, shelves) placed against and away from walls, labelled `clutter`.
 
+**GLB export** writes glTF coordinates as (x, y, −z_north). glTF is right-handed with +Y up, so writing plan z directly would produce a mirror image of the room. A test checks the mapping: in the exported file, a window on the east wall must lie on +X, and the north wall must lie on −Z.
+
 This builder is deliberately independent of any downstream generator. It only needs to be geometrically correct and labelled, not production quality.
 
 ### 5.3 Scan simulator (M2)
@@ -257,6 +259,8 @@ Every wall and element carries evidence features (support ratio, inlier RMS, cov
 `export.to_document(result) → room-core`:
 
 - Walls in CCW order with `Orientation` from each edge's outward normal and `Length` from the edge.
+- **Exact closure.** The downstream generator rejects chains that miss closing by more than 0.001 document units, so lengths are derived from rounded vertex coordinates rather than rounded independently. For Manhattan rooms this closes exactly; for non-Manhattan rooms the final wall's length and orientation absorb any residual.
+- **Rectangles.** The downstream generator builds rectangles from `Dimensions` alone, as (0,0) → (Width,0) → (Width,Length) → (0,Length). `Width` is the x extent, `Length` the z extent, and `Walls.Items` are listed starting with the edge along +x: `[Width, Length, Width, Length]`.
 - Wall IDs from bearings (`North`, `East`, …), suffixed when duplicated (`North-2`).
 - `Shape` classified from turn angles (Rectangle, Square, L-Shape, else Irregular), with `Dimensions` filled where the format requires it.
 - Elements with `WallID` and `Offset` measured from each wall's start vertex.

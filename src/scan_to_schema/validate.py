@@ -39,8 +39,11 @@ COMPASS = {
 }
 
 
-def closure_tolerance_m(perimeter_m: float) -> float:
-    return max(0.01, 0.005 * perimeter_m)
+# The downstream generator rejects wall chains whose end misses the start by
+# more than 0.001. Measuring that in document units is at least as strict as
+# the generator whether it closes the chain before or after converting to
+# metres, so anything that passes here also builds there.
+CLOSURE_TOL_UNITS = 0.001
 
 
 @dataclass(frozen=True)
@@ -142,9 +145,9 @@ def _geometric_issues(room: dict[str, Any]) -> Iterable[Issue]:
 
     # Footprint
     plan = g.build_plan(walls, to_m)
-    tol = closure_tolerance_m(plan.perimeter)
-    if plan.closure_gap > tol:
-        yield Issue("Walls/Items", f"walls don't close: chain ends {plan.closure_gap:.3f} m from its start (tolerance {tol:.3f} m)")
+    gap_units = plan.closure_gap / to_m
+    if gap_units > CLOSURE_TOL_UNITS:
+        yield Issue("Walls/Items", f"walls don't close: chain ends {gap_units:.4g} {room['Units']} from its start (tolerance {CLOSURE_TOL_UNITS} {room['Units']})")
     else:
         for i, j in g.self_intersections(plan.points):
             yield Issue("Walls/Items", f"walls {plan.wall_ids[i]!r} and {plan.wall_ids[j]!r} cross; footprint must be a simple polygon")
@@ -237,22 +240,28 @@ def _shape_issues(room: dict[str, Any], ccw: list[dict[str, Any]], to_m: float) 
         return
     turns = g.turn_angles(ccw)
     right_angled = all(min(abs(abs(t) - 90), abs(t)) < ANGLE_TOL_DEG for t in turns)
-    lengths = [w["Length"] for w in ccw]
-    tol = closure_tolerance_m(sum(lengths) * to_m) / to_m
+    tol = CLOSURE_TOL_UNITS
 
     if shape in ("Rectangle", "Square"):
         if len(ccw) != 4 or not right_angled:
             yield Issue("Shape", f"{shape} needs 4 walls meeting at right angles; found {len(ccw)} walls")
             return
-        a, b = lengths[0], lengths[1]
-        if abs(lengths[2] - a) > tol or abs(lengths[3] - b) > tol:
-            yield Issue("Shape", f"{shape} has unequal opposite walls ({lengths})")
-        if shape == "Square" and abs(a - b) > tol:
-            yield Issue("Shape", f"Square has sides {a:g} and {b:g}")
+        # The generator builds rectangles from Dimensions alone:
+        # (0,0) → (Width,0) → (Width,Length) → (0,Length), so Width runs along x
+        # and Length along z, and wall i is edge i. Walls must therefore be listed
+        # in that order: [Width, Length, Width, Length], starting with the edge
+        # that runs along +x.
+        lengths = [w["Length"] for w in room["Walls"]["Items"]]
         dims = room["Dimensions"]
-        declared = sorted([dims["Length"], dims["Width"]])
-        if any(abs(x - y) > tol for x, y in zip(declared, sorted([a, b]))):
-            yield Issue("Dimensions", f"Length/Width {declared} don't match the walls {sorted([a, b])}")
+        expected = [dims["Width"], dims["Length"], dims["Width"], dims["Length"]]
+        if any(abs(a - b) > tol for a, b in zip(lengths, expected)):
+            yield Issue(
+                "Walls/Items",
+                f"{shape} walls must be listed [Width, Length, Width, Length] = {expected} "
+                f"(Width along x, Length along z, starting from the edge along +x); found {lengths}",
+            )
+        if shape == "Square" and abs(dims["Length"] - dims["Width"]) > tol:
+            yield Issue("Dimensions", f"Square has Length {dims['Length']:g} and Width {dims['Width']:g}")
     elif shape == "L-Shape":
         reflex = sum(1 for t in turns if t < -ANGLE_TOL_DEG)
         if len(ccw) != 6 or not right_angled or reflex != 1:
