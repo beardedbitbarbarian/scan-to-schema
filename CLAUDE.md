@@ -4,7 +4,7 @@ Context for any Claude Code session working in this repo.
 
 ## What this is
 
-Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 3D room scans. Output is in the **room-capture** format, which a separate room-to-GLB generator consumes. Progress is measured by a synthetic round-trip benchmark: generate a room with known ground truth, simulate a degraded scan, reconstruct, score. See README.md for the milestone table; work through milestones in order.
+Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 3D room scans. Output is in the **room-capture** format, which a separate room-to-GLB generator consumes. Progress is measured by a synthetic round-trip benchmark: generate a room with known ground truth, simulate a degraded scan, reconstruct, score. Before starting work, read docs/plan.md (scope, success criteria, per-milestone acceptance criteria) and docs/architecture.md (module layout, data contracts, algorithms, design decisions D1–D10). Work through milestones in order; a milestone is done when its acceptance criteria pass. If a change contradicts a design decision, update the decision table in the same commit and say why.
 
 ## Conventions (load-bearing; the downstream generator depends on these)
 

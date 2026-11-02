@@ -36,6 +36,8 @@ Every change to the reconstructor is measured against the same benchmark, so pro
 | M6 | Robustness: non-rectangular rooms, heavy clutter, confidence scores, real mesh input | |
 | M7 | Round-trip rebuild and visual diff overlay | |
 
+Details: [architecture](docs/architecture.md) covers how it's built; [plan and spec](docs/plan.md) covers scope, success criteria, and acceptance criteria per milestone.
+
 ## Room format
 
 Output uses the **room-capture** format, so reconstructed rooms feed directly into an existing room-to-GLB generator. A room is a chain of walls, each described by the compass bearing it faces outward and its length. Doors, windows, closets, and recesses attach to a wall by ID and are placed by offset along it.
