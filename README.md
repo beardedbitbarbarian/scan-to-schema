@@ -67,7 +67,7 @@ Two schemas share the same field names:
 
 A test enforces that core never defines a field that room-capture doesn't, and `to_core()` projects any full document down to core.
 
-**Frame:** right-handed, +Y up, with plan coordinates (x, z) equal to glTF x and z. Walls are listed in positive (counter-clockwise) order in the (x, z) plane, with the room's interior on the left of each wall. The first wall starts at the origin.
+**Frame:** right-handed, +Y up, +X east, −Z north, with plan coordinates (x, z) equal to glTF x and z. `Orientation` is the compass bearing a wall faces outward. Walls are listed clockwise on a north-up map (north, east, south, west for a box), starting at the origin.
 
 ### Validation
 

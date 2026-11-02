@@ -8,11 +8,11 @@ Scan-to-Schema reconstructs structured room documents from noisy, phone-quality 
 
 ## Conventions (load-bearing; the downstream generator depends on these)
 
-- **Frame:** right-handed, +Y up. Plan coordinates (x, z) are the glTF x and z axes, exactly as written downstream (in a top-down view with +X right, +Z points down). Internally everything is metres; documents may use `inches`, `feet`, `centimeters`, or `meters` (convert with `geometry.UNIT_TO_M`).
-- **Orientation** is the bearing a wall's *outward* face points: 0 = "north" = +z, 90 = "east" = +x. These are document-frame labels, not true compass directions.
-- **Walls.Items are listed in positive (counter-clockwise) order in the (x, z) plane** (positive signed area). In a top-down view this appears clockwise. Wall list index *is* the polygon edge index downstream. A wall facing bearing b runs in direction (-cos b, sin b). The first wall starts at the origin.
+- **Frame:** right-handed, +Y up, **+X east, −Z north** (+Z south). Plan coordinates (x, z) are the glTF x and z axes, exactly as written downstream. Internally everything is metres; documents may use `inches`, `feet`, `centimeters`, or `meters` (convert with `geometry.UNIT_TO_M`).
+- **Orientation** is the compass bearing a wall's *outward* face points: 0 = north (−z), 90 = east (+x).
+- **Walls.Items are listed in positive order in the (x, z) plane** (positive signed area): clockwise on a north-up map, outward bearings increasing N → E → S → W. Wall list index *is* the polygon edge index downstream. A wall facing bearing b runs in direction (cos b, sin b). The first wall starts at the origin.
 - **Offset** is the distance along a wall's edge from its *start* vertex (`geometry.OFFSET_FROM = "start"`). Openings occupy [Offset, Offset + Width] along the edge.
-- **Rectangles/Squares** are built downstream from `Dimensions` alone: `Width` = x extent, `Length` = z extent, walls listed `[Width, Length, Width, Length]` starting with the edge along +x.
+- **Rectangles/Squares** are built downstream from `Dimensions` alone: `Width` = x extent, `Length` = z extent, walls listed `[Width, Length, Width, Length]` facing `[0, 90, 180, 270]`, starting with the north wall (the edge along +x).
 - **Closure:** wall chains must close within 0.001 document units (the downstream limit). Derive lengths from rounded vertices; never round lengths independently.
 - **glTF export** writes plan coordinates unchanged (plan x, y, z = glTF x, y, z), as the downstream generator does. Never negate a single axis; that mirrors the room.
 - Doors start at the floor. Windows have SillHeight > 0. Closet openings are centred in the closet's interior Width unless `OpeningCentered` is false, in which case `OpeningOffset` is required. Recess Depth may equal, but not exceed, wall thickness.

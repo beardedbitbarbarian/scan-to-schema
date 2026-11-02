@@ -83,7 +83,7 @@ def test_confidence_rejected_in_full(full):
 # --- plan geometry ------------------------------------------------------------
 
 def test_listing_order_detected(full):
-    ccw = build_plan(full["Walls"]["Items"])  # S, E, N, W is counter-clockwise from above
+    ccw = build_plan(full["Walls"]["Items"])  # N, E, S, W is positive order in (x, z)
     cw = build_plan(list(reversed(full["Walls"]["Items"])))
     assert cw.listed_clockwise and not ccw.listed_clockwise
     assert cw.area == pytest.approx(120) and ccw.area == pytest.approx(120)
@@ -97,11 +97,26 @@ def test_clockwise_listing_rejected(full, core):
     assert "listed clockwise" in messages(core)
 
 
-def test_rotated_listing_start_is_fine(full):
-    # Any wall may come first, as long as the order runs counter-clockwise.
+def test_rotated_listing_start_is_fine_for_chains(core):
+    # Chain-built rooms may start at any wall, as long as the order is positive.
+    items = core["Walls"]["Items"]
+    core["Walls"]["Items"] = items[2:] + items[:2]
+    assert validate_room(core) == []
+
+
+def test_rectangle_must_start_with_north_wall(full):
+    # Rectangles are built from Dimensions: edge 0 is always the north wall.
     items = full["Walls"]["Items"]
     full["Walls"]["Items"] = items[2:] + items[:2]
-    assert validate_room(full) == []
+    assert "north wall first" in messages(full)
+
+
+def test_compass_frame():
+    from scan_to_schema.geometry import direction
+    # Outward bearing 0 (north, -z): the wall runs east, +x.
+    assert direction(0) == pytest.approx((1, 0))
+    # Outward bearing 90 (east, +x): the wall runs south, +z.
+    assert direction(90) == pytest.approx((0, 1))
 
 
 def test_l_shape_has_one_inside_corner(core):
@@ -284,7 +299,7 @@ def test_recess_may_use_full_wall_thickness(full):
 
 def test_first_wall_starts_at_origin(full):
     plan = build_plan(full["Walls"]["Items"])
-    assert plan.points[0] == (0.0, 0.0) and plan.wall_ids[0] == "South"
+    assert plan.points[0] == (0.0, 0.0) and plan.wall_ids[0] == "North"
 
 
 # --- cli -----------------------------------------------------------------------------

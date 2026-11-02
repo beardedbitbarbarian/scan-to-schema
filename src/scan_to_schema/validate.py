@@ -260,6 +260,13 @@ def _shape_issues(room: dict[str, Any], ccw: list[dict[str, Any]], to_m: float) 
                 f"{shape} walls must be listed [Width, Length, Width, Length] = {expected} "
                 f"(Width along x, Length along z, starting from the edge along +x); found {lengths}",
             )
+        bearings = [w["Orientation"] for w in room["Walls"]["Items"]]
+        if any(_angle_diff(b, e) > ANGLE_TOL_DEG for b, e in zip(bearings, [0, 90, 180, 270])):
+            yield Issue(
+                "Walls/Items",
+                f"{shape} walls must face [0, 90, 180, 270] in order (north wall first); found {bearings}. "
+                "The downstream generator places wall i's openings on edge i regardless of Orientation.",
+            )
         if shape == "Square" and abs(dims["Length"] - dims["Width"]) > tol:
             yield Issue("Dimensions", f"Square has Length {dims['Length']:g} and Width {dims['Width']:g}")
     elif shape == "L-Shape":

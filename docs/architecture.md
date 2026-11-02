@@ -42,17 +42,17 @@ These apply everywhere and match the `room-capture` format consumed downstream.
 | Topic | Convention |
 |---|---|
 | Units | Metres internally. Documents may use any `room-capture` unit; convert on load and on export. |
-| 3D frame | Right-handed, **+Y up**. Plan coordinates (x, z) are the glTF x and z axes directly, as the downstream generator writes them. In a top-down view with +X to the right, +Z points *down* the screen. Floor at y = 0 after framing. |
+| 3D frame | Right-handed, **+Y up**, **+X east, −Z north** (+Z is south). Plan coordinates (x, z) are the glTF x and z axes directly, as the downstream generator writes them. A top-down view with north up is a normal map. Floor at y = 0 after framing. |
 | Plan frame | 2D points are (x, z). |
-| Wall order | `Walls.Items` in positive (counter-clockwise) order in the (x, z) plane: positive signed area with x as the first axis. In a top-down view (+X right, +Z down) this order runs clockwise. Wall *i* is polygon edge *i*. The first wall starts at the origin. |
-| Orientation | Bearing of the wall's outward face. A wall facing bearing *b* runs in direction (−cos *b*, sin *b*). Bearings label document-frame directions (0 "north" = +z, 90 "east" = +x); they are not true compass directions, since in a right-handed Y-up frame with +x east, +z is south. |
+| Wall order | `Walls.Items` in positive order in the (x, z) plane (positive signed area with x as the first axis), which runs **clockwise on a north-up map**: outward bearings increase by 90° at each convex corner (N, E, S, W). Wall *i* is polygon edge *i*. The first wall starts at the origin. |
+| Orientation | Compass bearing of the wall's outward face: 0 = north (−z), 90 = east (+x). A wall facing bearing *b* runs in direction (cos *b*, sin *b*). |
 | Offset | Distance along a wall from its start vertex to the near edge of the element. |
 | Normals | Interior surfaces face into the room. |
 | Randomness | Every random choice takes an explicit `numpy.random.Generator`. Same seed, same output, on every platform. |
 
 ### North is not observable
 
-A scan has no compass. After Manhattan alignment the reconstructor knows the room's axes only up to a 90° rotation. The exporter therefore picks a deterministic frame: the dominant wall axis becomes the x axis, and the first wall is the one starting at the footprint's minimum-(z, x) corner. Mapping to true compass directions would need a supplied heading (for example, from phone metadata) plus the label reflection noted under Orientation, so it is deferred.
+A scan has no compass. After Manhattan alignment the reconstructor knows the room's axes only up to a 90° rotation. The exporter therefore picks a deterministic frame: the dominant wall axis becomes the x axis, and the first wall is the one starting at the footprint's minimum-(z, x) corner (the north-west corner in this frame). Rectangles always start with the north wall, because the downstream generator builds them from `Dimensions` with edge 0 along +x. If a caller supplies a heading (for example, from phone metadata), the exporter rotates the room so bearings are true compass directions.
 
 Consequence for evaluation: scores are computed after aligning the reconstruction to ground truth (section 7.1), never in raw coordinates.
 

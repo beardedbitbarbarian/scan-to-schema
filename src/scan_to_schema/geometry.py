@@ -1,12 +1,12 @@
 """Turn a room document's wall chain into plan geometry.
 
 Frame matches the downstream room-to-GLB generator: right-handed, +Y up, metres,
-with plan coordinates (x, z) equal to glTF x and z. A wall's Orientation is the
-bearing of its outward face in document-frame labels (0 "north" = +z, 90 "east"
-= +x; not true compass directions). Walking the footprint in positive order in
-the (x, z) plane (interior on the left), a wall facing bearing b runs in
-direction (-cos b, sin b): the outward normal turned 90 degrees to the left. The room's inward face is
-then the left perpendicular of each run, as in the generator.
+with plan coordinates (x, z) equal to glTF x and z. +X is east and -Z is north
+(+Z is south), so a top-down view with north up is a normal map. A wall's
+Orientation is the compass bearing of its outward face (0 = north = -z,
+90 = east = +x). Walking the footprint in positive order in the (x, z) plane
+(clockwise on a north-up map), a wall facing bearing b runs in direction
+(cos b, sin b), and the room's interior is on the (x, z) left of each run.
 
 Walls.Items must be listed counter-clockwise: the generator maps wall list
 index directly to polygon edge index. The edge vectors are fixed by
@@ -56,8 +56,9 @@ def scale(doc: dict[str, Any]) -> float:
 
 
 def direction(bearing_deg: float) -> Point:
+    """Run direction (dx, dz) of a wall whose outward face points at bearing_deg."""
     b = math.radians(bearing_deg)
-    return (-math.cos(b), math.sin(b))
+    return (math.cos(b), math.sin(b))
 
 
 def build_plan(walls: list[dict[str, Any]], to_m: float = 1.0) -> Plan:
@@ -97,8 +98,9 @@ def turn_angles(walls_ccw: list[dict[str, Any]]) -> list[float]:
     """Signed turn at each corner going CCW, degrees in (-180, 180]. Left turns are positive."""
     out = []
     for a, b in zip(walls_ccw, walls_ccw[1:] + walls_ccw[:1]):
-        # bearing increases clockwise, so a left (CCW) turn decreases it
-        d = (a["Orientation"] - b["Orientation"]) % 360
+        # walking in positive (x, z) order, a convex corner turns the outward
+        # bearing clockwise (north -> east), so convex turns increase it
+        d = (b["Orientation"] - a["Orientation"]) % 360
         out.append(d - 360 if d > 180 else d)
     return out
 

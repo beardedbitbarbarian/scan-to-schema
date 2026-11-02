@@ -32,7 +32,7 @@ Phone-based photogrammetry and LiDAR apps produce room meshes that look right bu
 
 - Point clouds (`.ply`) or meshes (`.obj`, `.glb`) of a single room interior, as exported by common phone scanning apps
 - Any consistent unit, with the up axis unknown and the floor not necessarily at zero
-- Optional: capture poses (improves opening evidence). True compass alignment from a heading is deferred (architecture §2)
+- Optional: a heading (to produce true compass bearings); capture poses (improves opening evidence)
 
 **Output**
 
