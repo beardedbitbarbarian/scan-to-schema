@@ -75,7 +75,7 @@ Every milestone ends with tests passing, CI green, and the project in a usable s
 
 ### M0: Room format and validator ✅
 
-Done. room-capture vendored, room-core defined, geometric validator, CLI, examples, CI.
+Done. room-core format defined, geometric validator, CLI, examples, CI.
 
 ### M1: Synthetic room generator (M)
 

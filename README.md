@@ -4,7 +4,7 @@ Turn noisy, phone-quality 3D room scans into clean, structured room descriptions
 
 ## Why
 
-Consumer photogrammetry and LiDAR apps produce room meshes that *look* right but aren't usable for structured work. They are noisy, full of holes, slightly tilted, and furniture is fused into the walls. Anything downstream that needs the actual architecture (rebuilding a clean model, measuring, placing assets, generating VR-ready geometry) has to recover it first.
+Consumer photogrammetry and LiDAR apps produce room meshes that *look* right but aren't usable for structured work. They are noisy, full of holes, slightly tilted, and furniture is fused into the walls. Anything that needs the actual architecture (floor plans, measurement, clean 3D models, asset placement) has to recover it first.
 
 ## How the project measures itself
 
@@ -38,34 +38,27 @@ Every change to the reconstructor is measured against the same benchmark, so pro
 
 Details: [architecture](docs/architecture.md) covers how it's built; [plan and spec](docs/plan.md) covers scope, success criteria, and acceptance criteria per milestone.
 
-## Room format
+## Room format: room-core
 
-Output uses the **room-capture** format, so reconstructed rooms feed directly into an existing room-to-GLB generator. A room is a chain of walls, each described by the compass bearing it faces outward and its length. Doors, windows, closets, and recesses attach to a wall by ID and are placed by offset along it.
+Output is **room-core**, a small geometry-only JSON format defined by this project ([schema](src/scan_to_schema/schema/room-core.schema.json)). A room is a chain of walls, each described by the compass bearing it faces outward and its length. Doors, windows, closets, and recesses attach to a wall by ID and are placed by offset along it. Every element can carry a `Confidence` score.
 
 ```json
 {
-  "ID": "example-bedroom", "EntityType": "Room", "Units": "feet", "Shape": "Rectangle",
+  "ID": "example-box-bedroom", "EntityType": "Room", "Units": "feet", "Shape": "Rectangle",
   "Dimensions": { "Length": 12, "Width": 10, "Height": 8 },
   "Walls": {
     "Items": [
-      { "ID": "South", "Orientation": 180, "Length": 12 },
-      { "ID": "East",  "Orientation": 90,  "Length": 10 },
-      { "ID": "North", "Orientation": 0,   "Length": 12 },
-      { "ID": "West",  "Orientation": 270, "Length": 10 }
+      { "ID": "North", "Orientation": 0,   "Length": 10 },
+      { "ID": "East",  "Orientation": 90,  "Length": 12 },
+      { "ID": "South", "Orientation": 180, "Length": 10 },
+      { "ID": "West",  "Orientation": 270, "Length": 12 }
     ]
   },
   "Doors": [{ "WallID": "South", "Offset": 1.5, "Width": 2.67, "Height": 6.67 }]
 }
 ```
 
-Two schemas share the same field names:
-
-| Schema | Contains | Produced by |
-|---|---|---|
-| [`room-core`](src/scan_to_schema/schema/room-core.schema.json) | Geometry only, plus optional per-element `Confidence` | The reconstructor. A scan can recover geometry; it can't reliably recover paint colours or door swing. |
-| [`room-capture`](src/scan_to_schema/schema/room-capture.schema.json) | Geometry plus appearance (materials, colours, flooring, ceiling type) | A later enrichment step, or by hand |
-
-A test enforces that core never defines a field that room-capture doesn't, and `to_core()` projects any full document down to core.
+room-core describes only what a scan can recover. Appearance (materials, colours, door swing) is out of scope; tools that need it map room-core into their own richer formats.
 
 **Frame:** right-handed, +Y up, +X east, −Z north, with plan coordinates (x, z) equal to glTF x and z. `Orientation` is the compass bearing a wall faces outward. Walls are listed clockwise on a north-up map (north, east, south, west for a box), starting at the origin.
 
@@ -73,9 +66,9 @@ A test enforces that core never defines a field that room-capture doesn't, and `
 
 JSON Schema accepts a "Rectangle" with a single 99 m wall and a door on a wall that doesn't exist. So validation runs a second, geometric pass:
 
-- Walls close into a loop (within scanner-grade tolerance) and form a simple polygon enclosing positive area
-- Walls are listed counter-clockwise, since wall order sets polygon edge order downstream (a clockwise listing is detected from the geometry and rejected)
-- `Shape` and `Dimensions` agree with the walls (rectangles, squares, L-shapes with exactly one inside corner)
+- Walls close into a loop (within 0.001 document units) and form a simple polygon enclosing positive area
+- Walls are listed in the right direction, since wall order sets polygon edge order (a backwards listing is detected from the geometry and rejected)
+- `Shape` and `Dimensions` agree with the walls (rectangles listed north wall first, squares, L-shapes with exactly one inside corner)
 - Compass-named walls ("North") face that way
 - Every door, window, closet opening, and recess references a real wall, fits its length and height, and doesn't overlap another (a transom above a door is fine)
 - Nothing sits on an open wall; closet openings fit their interior; recesses are no deeper than the wall

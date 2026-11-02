@@ -37,12 +37,12 @@ The reconstructor never sees ground truth or point labels. Labels exist only so 
 
 ## 2. Conventions
 
-These apply everywhere and match the `room-capture` format consumed downstream.
+These apply everywhere and are part of the room-core format contract.
 
 | Topic | Convention |
 |---|---|
-| Units | Metres internally. Documents may use any `room-capture` unit; convert on load and on export. |
-| 3D frame | Right-handed, **+Y up**, **+X east, −Z north** (+Z is south). Plan coordinates (x, z) are the glTF x and z axes directly, as the downstream generator writes them. A top-down view with north up is a normal map. Floor at y = 0 after framing. |
+| Units | Metres internally. Documents may use `inches`, `feet`, `centimeters`, or `meters`; convert on load and on export. |
+| 3D frame | Right-handed, **+Y up**, **+X east, −Z north** (+Z is south). Plan coordinates (x, z) are the glTF x and z axes directly. A top-down view with north up is a normal map. Floor at y = 0 after framing. |
 | Plan frame | 2D points are (x, z). |
 | Wall order | `Walls.Items` in positive order in the (x, z) plane (positive signed area with x as the first axis), which runs **clockwise on a north-up map**: outward bearings increase by 90° at each convex corner (N, E, S, W). Wall *i* is polygon edge *i*. The first wall starts at the origin. |
 | Orientation | Compass bearing of the wall's outward face: 0 = north (−z), 90 = east (+x). A wall facing bearing *b* runs in direction (cos *b*, sin *b*). |
@@ -52,7 +52,7 @@ These apply everywhere and match the `room-capture` format consumed downstream.
 
 ### North is not observable
 
-A scan has no compass. After Manhattan alignment the reconstructor knows the room's axes only up to a 90° rotation. The exporter therefore picks a deterministic frame: the dominant wall axis becomes the x axis, and the first wall is the one starting at the footprint's minimum-(z, x) corner (the north-west corner in this frame). Rectangles always start with the north wall, because the downstream generator builds them from `Dimensions` with edge 0 along +x. If a caller supplies a heading (for example, from phone metadata), the exporter rotates the room so bearings are true compass directions.
+A scan has no compass. After Manhattan alignment the reconstructor knows the room's axes only up to a 90° rotation. The exporter therefore picks a deterministic frame: the dominant wall axis becomes the x axis, and the first wall is the one starting at the footprint's minimum-(z, x) corner (the north-west corner in this frame). Rectangles always start with the north wall, because room-core defines them from `Dimensions` with edge 0 along +x. If a caller supplies a heading (for example, from phone metadata), the exporter rotates the room so bearings are true compass directions.
 
 Consequence for evaluation: scores are computed after aligning the reconstruction to ground truth (section 7.1), never in raw coordinates.
 
@@ -60,7 +60,7 @@ Consequence for evaluation: scores are computed after aligning the reconstructio
 
 ```
 src/scan_to_schema/
-├── schema/              room-capture (vendored, read-only) and room-core JSON Schemas
+├── schema/              room-core JSON Schema (the output format)
 ├── validate.py          structural + geometric validation          (M0, done)
 ├── geometry.py          wall chain ⇄ plan polygon, unit handling     (M0, done)
 ├── types.py             dataclasses shared between stages
@@ -93,8 +93,9 @@ Dependency direction is strictly downward: `recon` may import `geometry`, `types
 
 ### 4.1 Documents
 
-- **room-core** is the reconstructor's only output and the generator's ground-truth output. Ground truth omits `Confidence`; reconstructions include it.
-- **room-capture** is accepted as input anywhere a document is read. `to_core()` projects it down.
+- **room-core** is the only document format: the reconstructor's output and the synthetic generator's ground truth. Ground truth omits `Confidence`; reconstructions include it.
+- room-core is a frozen v0.1 contract. Fields are not renamed, removed, or redefined without a version bump recorded here.
+- Appearance is out of scope. Consumers that need materials or colours map room-core into their own formats; adapters live with the consumer, not in this repo.
 - Every document written by any stage passes `validate_room()`. Stages that cannot produce a valid room raise rather than emit an invalid one.
 
 ### 4.2 In-memory types (`types.py`)
@@ -151,7 +152,7 @@ class ReconResult:
 
 | Artifact | Format | Notes |
 |---|---|---|
-| Room document | `.json` | room-core or room-capture |
+| Room document | `.json` | room-core |
 | Mesh | `.glb` | per-triangle label and instance stored as glTF extras |
 | Point cloud | `.ply` | `label` and `instance` as extra vertex properties |
 | Bench report | `.json` + `.md` | machine-readable plus a summary table |
@@ -177,9 +178,9 @@ Generated artifacts are never committed. Tests generate small fixtures at run ti
 - An exterior backdrop (large box) so rays through windows and doors hit something labelled `exterior`.
 - Optional clutter: axis-aligned and rotated boxes (beds, dressers, shelves) placed against and away from walls, labelled `clutter`.
 
-**GLB export** writes plan coordinates unchanged: plan (x, y, z) is glTF (x, y, z), matching the downstream generator. Never negate a single axis; that mirrors the room. A chirality test builds an asymmetric room (an L with its notch at a known corner) and checks the notch sits at the same (x, z) in the exported file.
+**GLB export** writes plan coordinates unchanged: plan (x, y, z) is glTF (x, y, z). Never negate a single axis; that mirrors the room. A chirality test builds an asymmetric room (an L with its notch at a known corner) and checks the notch sits at the same (x, z) in the exported file.
 
-This builder is deliberately independent of any downstream generator. It only needs to be geometrically correct and labelled, not production quality.
+This builder is deliberately simple. It only needs to be geometrically correct and labelled, not production quality.
 
 ### 5.3 Scan simulator (M2)
 
@@ -259,8 +260,8 @@ Every wall and element carries evidence features (support ratio, inlier RMS, cov
 `export.to_document(result) → room-core`:
 
 - Walls in CCW order with `Orientation` from each edge's outward normal and `Length` from the edge.
-- **Exact closure.** The downstream generator rejects chains that miss closing by more than 0.001 document units, so lengths are derived from rounded vertex coordinates rather than rounded independently. For Manhattan rooms this closes exactly; for non-Manhattan rooms the final wall's length and orientation absorb any residual.
-- **Rectangles.** The downstream generator builds rectangles from `Dimensions` alone, as (0,0) → (Width,0) → (Width,Length) → (0,Length). `Width` is the x extent, `Length` the z extent, and `Walls.Items` are listed starting with the edge along +x: `[Width, Length, Width, Length]`.
+- **Exact closure.** room-core requires chains to close within 0.001 document units, so lengths are derived from rounded vertex coordinates rather than rounded independently. For Manhattan rooms this closes exactly; for non-Manhattan rooms the final wall's length and orientation absorb any residual.
+- **Rectangles.** room-core defines rectangles by `Dimensions`, as (0,0) → (Width,0) → (Width,Length) → (0,Length). `Width` is the x extent, `Length` the z extent, and `Walls.Items` are listed North, East, South, West: `[Width, Length, Width, Length]`.
 - Wall IDs from bearings (`North`, `East`, …), suffixed when duplicated (`North-2`).
 - `Shape` classified from turn angles (Rectangle, Square, L-Shape, else Irregular), with `Dimensions` filled where the format requires it.
 - Elements with `WallID` and `Offset` measured from each wall's start vertex.
@@ -322,11 +323,11 @@ Core algorithms (RANSAC, histograms, evidence maps) are written against numpy an
 
 | # | Decision | Why | Alternative rejected |
 |---|---|---|---|
-| D1 | Emit `room-core`, a strict projection of `room-capture` | Output is directly usable downstream; no adapter layer | A bespoke output format |
-| D2 | Y-up, metres, CCW walls internally | Matches the downstream format, so export is a relabelling, not a transform | Z-up internally |
+| D1 | Emit `room-core`, a small geometry-only format owned by this project | Describes exactly what a scan can recover; consumers adapt it to their own formats, so this repo depends on no external format | Targeting one consumer's full format directly |
+| D2 | Right-handed Y-up, metres, room-core wall order internally | Matches glTF and the output format, so export is a relabelling, not a transform | Z-up internally |
 | D3 | Treat north as unobservable; evaluate after alignment | A scan has no compass; pretending otherwise produces fake errors | Requiring heading input |
 | D4 | Synthetic-first development with a frozen benchmark | Measurable progress, no data-rights issues | Developing on real scans |
-| D5 | Own simple mesh builder for synthesis | Keeps the project self-contained and independent of any downstream implementation | Reusing an external generator |
+| D5 | Own simple mesh builder for synthesis | Keeps the project self-contained | Depending on an external mesh generator |
 | D6 | numpy/scipy core, Open3D optional | Clean installs and CI across Python versions | Open3D throughout |
 | D7 | Floor region as primary footprint signal, snapped to wall lines | Robust to furniture hiding walls | Wall lines alone |
 | D8 | Openings require positive evidence, not just absence | Absence alone cannot separate doorways from scan holes | Gap-only detection |

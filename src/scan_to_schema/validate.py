@@ -1,13 +1,9 @@
-"""Room validation: structural (JSON Schema) then geometric.
-
-Two document kinds share field names:
-  full  room-capture.schema.json: geometry plus appearance (materials, colours)
-  core  room-core.schema.json:    geometry only, plus optional Confidence
+"""room-core validation: structural (JSON Schema) then geometric.
 
 JSON Schema can't tell whether a room can exist, so the geometric pass checks
-that walls close into a simple polygon, that the declared Shape and
-Dimensions match the walls, and that every door, window, closet and recess
-fits its wall without overlapping another.
+that walls close into a simple polygon in the right order, that the declared
+Shape and Dimensions match the walls, and that every door, window, closet and
+recess fits its wall without overlapping another.
 """
 
 from __future__ import annotations
@@ -18,15 +14,13 @@ from dataclasses import dataclass
 from functools import cache
 from importlib import resources
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
 
 from . import geometry as g
 
-Kind = Literal["core", "full"]
-
-SCHEMA_FILES = {"full": "room-capture.schema.json", "core": "room-core.schema.json"}
+SCHEMA_FILE = "room-core.schema.json"
 
 MIN_WALL_M = 0.05  # shorter walls are almost certainly noise
 ANGLE_TOL_DEG = 1.0
@@ -38,11 +32,9 @@ COMPASS = {
     "south": 180, "s": 180, "southwest": 225, "sw": 225, "west": 270, "w": 270, "northwest": 315, "nw": 315,
 }
 
-
-# The downstream generator rejects wall chains whose end misses the start by
-# more than 0.001. Measuring that in document units is at least as strict as
-# the generator whether it closes the chain before or after converting to
-# metres, so anything that passes here also builds there.
+# A wall chain must end within this distance of its start, in document units.
+# Tight on purpose: consumers rebuild the polygon from these lengths and may
+# reject anything looser.
 CLOSURE_TOL_UNITS = 0.001
 
 
@@ -56,65 +48,35 @@ class Issue:
 
 
 @cache
-def load_schema(kind: Kind) -> dict[str, Any]:
-    text = resources.files("scan_to_schema").joinpath("schema", SCHEMA_FILES[kind]).read_text()
+def load_schema() -> dict[str, Any]:
+    text = resources.files("scan_to_schema").joinpath("schema", SCHEMA_FILE).read_text()
     return json.loads(text)
 
 
 @cache
-def _validator(kind: Kind) -> Draft202012Validator:
-    schema = load_schema(kind)
+def _validator() -> Draft202012Validator:
+    schema = load_schema()
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema)
 
 
-def detect_kind(room: dict[str, Any]) -> Kind:
-    """Full documents carry appearance; core documents never do."""
-    return "full" if ("Flooring" in room or "Ceiling" in room) else "core"
-
-
-def validate_room(room: dict[str, Any], kind: Kind | None = None) -> list[Issue]:
+def validate_room(room: dict[str, Any]) -> list[Issue]:
     """Return every problem found. An empty list means the room is valid."""
-    kind = kind or detect_kind(room)
     issues = [
         Issue("/".join(str(p) for p in e.absolute_path), e.message)
-        for e in sorted(_validator(kind).iter_errors(room), key=lambda e: list(e.absolute_path))
+        for e in sorted(_validator().iter_errors(room), key=lambda e: list(e.absolute_path))
     ]
     if issues:
         return issues  # geometric checks assume a well-formed document
     return list(_geometric_issues(room))
 
 
-def validate_file(path: str | Path, kind: Kind | None = None) -> list[Issue]:
+def validate_file(path: str | Path) -> list[Issue]:
     try:
         room = json.loads(Path(path).read_text())
     except json.JSONDecodeError as e:
         return [Issue("", f"invalid JSON: {e}")]
-    return validate_room(room, kind)
-
-
-# --- projection ------------------------------------------------------------
-
-
-def to_core(full: dict[str, Any]) -> dict[str, Any]:
-    """Drop everything a scan can't recover, keeping only fields the core schema defines."""
-    core = load_schema("core")
-
-    def resolve(node: dict[str, Any]) -> dict[str, Any]:
-        while "$ref" in node:
-            node = core["$defs"][node["$ref"].rsplit("/", 1)[-1]]
-        return node
-
-    def project(value: Any, node: dict[str, Any]) -> Any:
-        node = resolve(node)
-        if isinstance(value, dict) and "properties" in node:
-            props = node["properties"]
-            return {k: project(v, props[k]) for k, v in value.items() if k in props}
-        if isinstance(value, list) and "items" in node:
-            return [project(v, node["items"]) for v in value]
-        return value
-
-    return project(full, core)
+    return validate_room(room)
 
 
 # --- geometry ---------------------------------------------------------------
@@ -153,8 +115,8 @@ def _geometric_issues(room: dict[str, Any]) -> Iterable[Issue]:
             yield Issue("Walls/Items", f"walls {plan.wall_ids[i]!r} and {plan.wall_ids[j]!r} cross; footprint must be a simple polygon")
         if plan.area <= EPS:
             yield Issue("Walls/Items", "walls enclose no area; check Orientation values face outward")
-        elif plan.listed_clockwise:
-            yield Issue("Walls/Items", "walls are listed clockwise; list them counter-clockwise viewed from above (wall order sets polygon edge order)")
+        elif plan.listed_backwards:
+            yield Issue("Walls/Items", "walls are listed in the wrong direction; list them clockwise on a north-up map, e.g. North, East, South, West (wall order sets polygon edge order)")
     ccw = [by_id[i] for i in plan.wall_ids]
     for a, b in zip(ccw, ccw[1:] + ccw[:1]):
         if _angle_diff(a["Orientation"], b["Orientation"]) < ANGLE_TOL_DEG:
@@ -246,11 +208,10 @@ def _shape_issues(room: dict[str, Any], ccw: list[dict[str, Any]], to_m: float) 
         if len(ccw) != 4 or not right_angled:
             yield Issue("Shape", f"{shape} needs 4 walls meeting at right angles; found {len(ccw)} walls")
             return
-        # The generator builds rectangles from Dimensions alone:
-        # (0,0) → (Width,0) → (Width,Length) → (0,Length), so Width runs along x
-        # and Length along z, and wall i is edge i. Walls must therefore be listed
-        # in that order: [Width, Length, Width, Length], starting with the edge
-        # that runs along +x.
+        # A rectangle is defined by Dimensions: (0,0) → (Width,0) → (Width,Length)
+        # → (0,Length), so Width runs along x and Length along z, and wall i is
+        # edge i. Walls are therefore listed [Width, Length, Width, Length],
+        # starting with the north wall (the edge along +x).
         lengths = [w["Length"] for w in room["Walls"]["Items"]]
         dims = room["Dimensions"]
         expected = [dims["Width"], dims["Length"], dims["Width"], dims["Length"]]
@@ -265,7 +226,7 @@ def _shape_issues(room: dict[str, Any], ccw: list[dict[str, Any]], to_m: float) 
             yield Issue(
                 "Walls/Items",
                 f"{shape} walls must face [0, 90, 180, 270] in order (north wall first); found {bearings}. "
-                "The downstream generator places wall i's openings on edge i regardless of Orientation.",
+                "Wall i is edge i of the rectangle, so its openings land on that edge.",
             )
         if shape == "Square" and abs(dims["Length"] - dims["Width"]) > tol:
             yield Issue("Dimensions", f"Square has Length {dims['Length']:g} and Width {dims['Width']:g}")

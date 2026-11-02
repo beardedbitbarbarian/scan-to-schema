@@ -1,21 +1,20 @@
 """Turn a room document's wall chain into plan geometry.
 
-Frame matches the downstream room-to-GLB generator: right-handed, +Y up, metres,
-with plan coordinates (x, z) equal to glTF x and z. +X is east and -Z is north
+room-core frame: right-handed, +Y up, metres internally, with plan
+coordinates (x, z) equal to glTF x and z. +X is east and -Z is north
 (+Z is south), so a top-down view with north up is a normal map. A wall's
 Orientation is the compass bearing of its outward face (0 = north = -z,
 90 = east = +x). Walking the footprint in positive order in the (x, z) plane
 (clockwise on a north-up map), a wall facing bearing b runs in direction
 (cos b, sin b), and the room's interior is on the (x, z) left of each run.
 
-Walls.Items must be listed counter-clockwise: the generator maps wall list
-index directly to polygon edge index. The edge vectors are fixed by
-Orientation alone, so a clockwise listing is detectable from the sign of the
-polygon's area (it walks the shape backwards). build_plan reverses it so the
-geometry can still be analysed; the validator reports it as an error.
+Walls.Items must be listed in that positive order, because wall i is polygon
+edge i. The edge vectors are fixed by Orientation alone, so a wrong-direction
+listing is detectable from the sign of the polygon's area (it walks the shape
+backwards). build_plan reverses it so the geometry can still be analysed; the
+validator reports it as an error.
 
-Offset is the distance along a wall's edge from its start vertex (the
-generator uses it directly as the opening's left coordinate on that edge).
+Offset is the distance along a wall's edge from its start vertex.
 """
 
 from __future__ import annotations
@@ -26,8 +25,8 @@ from typing import Any
 
 UNIT_TO_M = {"meters": 1.0, "centimeters": 0.01, "feet": 0.3048, "inches": 0.0254}
 
-# Offset measures from the start of the wall's CCW run ("left" as seen from
-# outside the room), matching how the downstream generator places openings.
+# Offset measures from the start vertex of the wall's run ("left" as seen
+# from outside the room).
 OFFSET_FROM = "start"
 
 Point = tuple[float, float]
@@ -35,12 +34,12 @@ Point = tuple[float, float]
 
 @dataclass(frozen=True)
 class Plan:
-    """Footprint in metres, with walls in counter-clockwise order."""
+    """Footprint in metres, with walls in positive (x, z) order: clockwise on a north-up map."""
 
     wall_ids: list[str]  # CCW order
     points: list[Point]  # (x, z); points[i] is the start of wall_ids[i]; points[0] is the origin
     closure_gap: float  # distance between the chain's end and its start
-    listed_clockwise: bool
+    listed_backwards: bool
 
     @property
     def area(self) -> float:
@@ -73,16 +72,16 @@ def build_plan(walls: list[dict[str, Any]], to_m: float = 1.0) -> Plan:
         return pts, (x, y)
 
     pts, end = walk(walls)
-    clockwise = signed_area(pts) < 0
+    backwards = signed_area(pts) < 0
     ordered = walls
-    if clockwise:
+    if backwards:
         ordered = list(reversed(walls))
         pts, end = walk(ordered)
     return Plan(
         wall_ids=[w["ID"] for w in ordered],
         points=pts,
         closure_gap=math.hypot(*end),
-        listed_clockwise=clockwise,
+        listed_backwards=backwards,
     )
 
 

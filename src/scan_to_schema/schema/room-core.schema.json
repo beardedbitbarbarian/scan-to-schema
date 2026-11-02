@@ -1,50 +1,163 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "room-core.schema.json",
-    "title": "Room (geometry core)",
-    "description": "Geometry-only projection of room-capture.schema.json: everything a scan can recover, nothing it can't. Field names and meanings match room-capture exactly, so a core document plus appearance data forms a full room-capture document. Adds optional Confidence (0..1) on the room and each element; absent means ground truth.",
+    "title": "room-core",
+    "description": "room-core v0.1: a geometry-only description of a single room. A room is a chain of walls extruded to a ceiling height, with doors, windows, closets, and recesses attached to walls. Frame: right-handed, +Y up, +X east, -Z north (+Z south); plan coordinates are (x, z). Walls are listed clockwise on a north-up map (positive signed area in the (x, z) plane); wall i runs from vertex i to vertex i+1 and the first wall starts at the origin. The chain must close within 0.001 document units. Optional Confidence (0..1) on the room and each element carries the reconstructor's belief that it is correct; absent means ground truth.",
     "type": "object",
-    "required": ["ID", "EntityType", "Units", "Shape", "Walls"],
+    "required": [
+        "ID",
+        "EntityType",
+        "Units",
+        "Shape",
+        "Walls"
+    ],
     "additionalProperties": false,
     "properties": {
-        "ID":         { "type": "string" },
-        "EntityType": { "type": "string", "const": "Room" },
+        "ID": {
+            "type": "string"
+        },
+        "EntityType": {
+            "type": "string",
+            "const": "Room"
+        },
         "RoomType": {
             "type": "string",
-            "enum": ["Bedroom", "Bathroom", "Kitchen", "Living Room", "Dining Room", "Office", "Hallway", "Garage", "Basement", "Laundry", "Closet", "Other"]
+            "enum": [
+                "Bedroom",
+                "Bathroom",
+                "Kitchen",
+                "Living Room",
+                "Dining Room",
+                "Office",
+                "Hallway",
+                "Garage",
+                "Basement",
+                "Laundry",
+                "Closet",
+                "Other"
+            ]
         },
-        "FloorLevel": { "type": "integer", "minimum": 0 },
-        "Units":      { "type": "string", "enum": ["inches", "feet", "centimeters", "meters"] },
-        "Shape":      { "type": "string", "enum": ["Rectangle", "Square", "L-Shape", "Irregular"] },
+        "FloorLevel": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "Units": {
+            "type": "string",
+            "enum": [
+                "inches",
+                "feet",
+                "centimeters",
+                "meters"
+            ],
+            "description": "Unit for every length in the document."
+        },
+        "Shape": {
+            "type": "string",
+            "enum": [
+                "Rectangle",
+                "Square",
+                "L-Shape",
+                "Irregular"
+            ],
+            "description": "Rectangle and Square rooms are defined by Dimensions, with walls listed North, East, South, West. L-Shape and Irregular rooms are defined by their wall chain."
+        },
         "Dimensions": {
             "type": "object",
-            "required": ["Height"],
+            "required": [
+                "Height"
+            ],
             "additionalProperties": false,
             "properties": {
-                "Length": { "type": "number", "exclusiveMinimum": 0 },
-                "Width":  { "type": "number", "exclusiveMinimum": 0 },
-                "Height": { "type": "number", "exclusiveMinimum": 0 }
+                "Length": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Width": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                }
+            },
+            "description": "Width is the x (east-west) extent and Length the z (north-south) extent. Both are required for Rectangle and Square; Height is the floor-to-ceiling distance."
+        },
+        "Doors": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Door"
             }
         },
-        "Doors":    { "type": "array", "items": { "$ref": "#/$defs/Door" } },
-        "Windows":  { "type": "array", "items": { "$ref": "#/$defs/Window" } },
-        "Closets":  { "type": "array", "items": { "$ref": "#/$defs/Closet" } },
-        "Recesses": { "type": "array", "items": { "$ref": "#/$defs/Recess" } },
+        "Windows": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Window"
+            }
+        },
+        "Closets": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Closet"
+            }
+        },
+        "Recesses": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Recess"
+            }
+        },
         "Walls": {
             "type": "object",
-            "required": ["Items"],
+            "required": [
+                "Items"
+            ],
             "additionalProperties": false,
             "properties": {
-                "Defaults": { "$ref": "#/$defs/WallDefaults" },
-                "Items": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Wall" } }
+                "Defaults": {
+                    "$ref": "#/$defs/WallDefaults"
+                },
+                "Items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/$defs/Wall"
+                    },
+                    "description": "Walls in order, clockwise on a north-up map. Wall i is edge i of the floor polygon."
+                }
             }
         },
-        "Confidence": { "$ref": "#/$defs/Confidence" }
+        "Confidence": {
+            "$ref": "#/$defs/Confidence"
+        }
     },
-
-    "if":   { "properties": { "Shape": { "enum": ["Rectangle", "Square"] } }, "required": ["Shape"] },
-    "then": { "required": ["Dimensions"], "properties": { "Dimensions": { "required": ["Length", "Width", "Height"] } } },
-
+    "if": {
+        "properties": {
+            "Shape": {
+                "enum": [
+                    "Rectangle",
+                    "Square"
+                ]
+            }
+        },
+        "required": [
+            "Shape"
+        ]
+    },
+    "then": {
+        "required": [
+            "Dimensions"
+        ],
+        "properties": {
+            "Dimensions": {
+                "required": [
+                    "Length",
+                    "Width",
+                    "Height"
+                ]
+            }
+        }
+    },
     "$defs": {
         "Confidence": {
             "type": "number",
@@ -54,80 +167,244 @@
         },
         "Door": {
             "type": "object",
-            "required": ["Width", "Height", "WallID", "Offset"],
+            "required": [
+                "Width",
+                "Height",
+                "WallID",
+                "Offset"
+            ],
             "additionalProperties": false,
             "properties": {
-                "Type":       { "type": "string", "enum": ["Single", "Double", "Sliding", "Pocket", "Bifold", "French", "Barn"] },
-                "Width":      { "type": "number", "exclusiveMinimum": 0 },
-                "Height":     { "type": "number", "exclusiveMinimum": 0 },
-                "WallID":     { "type": "string" },
-                "Offset":     { "type": "number", "minimum": 0 },
-                "Confidence": { "$ref": "#/$defs/Confidence" }
+                "Type": {
+                    "type": "string",
+                    "enum": [
+                        "Single",
+                        "Double",
+                        "Sliding",
+                        "Pocket",
+                        "Bifold",
+                        "French",
+                        "Barn"
+                    ]
+                },
+                "Width": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "WallID": {
+                    "type": "string",
+                    "description": "ID of the wall this element is on."
+                },
+                "Offset": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Distance along the wall from its start vertex to the near edge of the element."
+                },
+                "Confidence": {
+                    "$ref": "#/$defs/Confidence"
+                }
             }
         },
         "Window": {
             "type": "object",
-            "required": ["SillHeight", "Width", "Height", "WallID", "Offset"],
+            "required": [
+                "SillHeight",
+                "Width",
+                "Height",
+                "WallID",
+                "Offset"
+            ],
             "additionalProperties": false,
             "properties": {
-                "Type":       { "type": "string", "enum": ["Single-Hung", "Double-Hung", "Casement", "Sliding", "Fixed", "Awning", "Bay", "Skylight"] },
-                "SillHeight": { "type": "number", "minimum": 0 },
-                "Width":      { "type": "number", "exclusiveMinimum": 0 },
-                "Height":     { "type": "number", "exclusiveMinimum": 0 },
-                "WallID":     { "type": "string" },
-                "Offset":     { "type": "number", "minimum": 0 },
-                "Confidence": { "$ref": "#/$defs/Confidence" }
+                "Type": {
+                    "type": "string",
+                    "enum": [
+                        "Single-Hung",
+                        "Double-Hung",
+                        "Casement",
+                        "Sliding",
+                        "Fixed",
+                        "Awning",
+                        "Bay",
+                        "Skylight"
+                    ]
+                },
+                "SillHeight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Height of the window's bottom edge above the floor."
+                },
+                "Width": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "WallID": {
+                    "type": "string",
+                    "description": "ID of the wall this element is on."
+                },
+                "Offset": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Distance along the wall from its start vertex to the near edge of the element."
+                },
+                "Confidence": {
+                    "$ref": "#/$defs/Confidence"
+                }
             }
         },
         "Closet": {
             "type": "object",
-            "required": ["WallID", "Offset", "Width", "Depth", "OpeningWidth", "OpeningHeight"],
+            "required": [
+                "WallID",
+                "Offset",
+                "Width",
+                "Depth",
+                "OpeningWidth",
+                "OpeningHeight"
+            ],
             "additionalProperties": false,
             "properties": {
-                "WallID":          { "type": "string" },
-                "Offset":          { "type": "number", "minimum": 0 },
-                "Width":           { "type": "number", "exclusiveMinimum": 0 },
-                "Depth":           { "type": "number", "exclusiveMinimum": 0 },
-                "OpeningWidth":    { "type": "number", "exclusiveMinimum": 0 },
-                "OpeningHeight":   { "type": "number", "exclusiveMinimum": 0 },
-                "OpeningCentered": { "type": "boolean", "default": true },
-                "OpeningOffset":   { "type": "number", "minimum": 0 },
-                "Confidence":      { "$ref": "#/$defs/Confidence" }
+                "WallID": {
+                    "type": "string",
+                    "description": "ID of the wall this element is on."
+                },
+                "Offset": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Distance along the wall from its start vertex to the near edge of the element."
+                },
+                "Width": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Depth": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Interior depth, perpendicular to the wall, away from the room."
+                },
+                "OpeningWidth": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "OpeningHeight": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "OpeningCentered": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "OpeningOffset": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Distance from the closet's near interior edge to the opening. Required when OpeningCentered is false."
+                },
+                "Confidence": {
+                    "$ref": "#/$defs/Confidence"
+                }
             }
         },
         "Recess": {
             "type": "object",
-            "required": ["WallID", "Offset", "Width", "Depth", "Height"],
+            "required": [
+                "WallID",
+                "Offset",
+                "Width",
+                "Depth",
+                "Height"
+            ],
             "additionalProperties": false,
             "properties": {
-                "WallID":       { "type": "string" },
-                "Offset":       { "type": "number", "minimum": 0 },
-                "Width":        { "type": "number", "exclusiveMinimum": 0 },
-                "Depth":        { "type": "number", "exclusiveMinimum": 0 },
-                "BottomHeight": { "type": "number", "minimum": 0, "default": 0 },
-                "Height":       { "type": "number", "exclusiveMinimum": 0 },
-                "Confidence":   { "$ref": "#/$defs/Confidence" }
+                "WallID": {
+                    "type": "string",
+                    "description": "ID of the wall this element is on."
+                },
+                "Offset": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Distance along the wall from its start vertex to the near edge of the element."
+                },
+                "Width": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Depth": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "How far the recess goes into the wall; at most the wall thickness."
+                },
+                "BottomHeight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 0,
+                    "description": "Height of the recess's bottom edge above the floor."
+                },
+                "Height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Confidence": {
+                    "$ref": "#/$defs/Confidence"
+                }
             }
         },
         "WallDefaults": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "Thickness": { "type": "number", "exclusiveMinimum": 0 }
+                "Thickness": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                }
             }
         },
         "Wall": {
             "type": "object",
-            "required": ["ID", "Orientation", "Length"],
+            "required": [
+                "ID",
+                "Orientation",
+                "Length"
+            ],
             "additionalProperties": false,
             "properties": {
-                "ID":          { "type": "string" },
-                "Orientation": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
-                "Length":      { "type": "number", "exclusiveMinimum": 0 },
-                "Height":      { "type": "number", "exclusiveMinimum": 0 },
-                "Open":        { "type": "boolean", "default": false },
-                "Thickness":   { "type": "number", "exclusiveMinimum": 0 },
-                "Confidence":  { "$ref": "#/$defs/Confidence" }
+                "ID": {
+                    "type": "string"
+                },
+                "Orientation": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMaximum": 360,
+                    "description": "Compass bearing the wall faces outward, in degrees: 0 = north (-z), 90 = east (+x), 180 = south, 270 = west. A wall facing bearing b runs in direction (cos b, sin b)."
+                },
+                "Length": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Length of the wall along its run."
+                },
+                "Height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Open": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "No wall surface on this edge (a pass-through to an adjacent space)."
+                },
+                "Thickness": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "Confidence": {
+                    "$ref": "#/$defs/Confidence"
+                }
             }
         }
     }

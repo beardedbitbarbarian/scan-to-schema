@@ -1,15 +1,13 @@
 {
-    "ID": "example-bedroom",
+    "ID": "example-box-bedroom",
     "EntityType": "Room",
     "RoomType": "Bedroom",
     "FloorLevel": 1,
     "Units": "feet",
     "Shape": "Rectangle",
     "Dimensions": { "Length": 12, "Width": 10, "Height": 8 },
-    "Flooring": "Carpet",
-    "Ceiling": { "Type": "Flat", "Material": "Drywall", "Color": { "Name": "White", "Hex": "#FFFFFF" } },
     "Walls": {
-        "Defaults": { "Material": "Drywall", "Color": { "Name": "Pale Blue", "Hex": "#C9DCEB" }, "Thickness": 0.4 },
+        "Defaults": { "Thickness": 0.4 },
         "Items": [
             { "ID": "North", "Orientation": 0,   "Length": 10 },
             { "ID": "East",  "Orientation": 90,  "Length": 12 },
@@ -18,12 +16,10 @@
         ]
     },
     "Doors": [
-        { "Type": "Single", "Swing": "Inward", "HingePosition": "Left", "Material": "Wood", "Color": { "Name": "White" },
-          "Width": 2.67, "Height": 6.67, "WallID": "South", "Offset": 1.5 }
+        { "Type": "Single", "WallID": "South", "Offset": 1.5, "Width": 2.67, "Height": 6.67 }
     ],
     "Windows": [
-        { "Type": "Double-Hung", "Material": "Vinyl", "Color": { "Name": "White" },
-          "SillHeight": 3, "Width": 3, "Height": 4, "WallID": "North", "Offset": 4.5 }
+        { "Type": "Double-Hung", "WallID": "North", "Offset": 4.5, "SillHeight": 3, "Width": 3, "Height": 4 }
     ],
     "Closets": [
         { "WallID": "East", "Offset": 3, "Width": 5, "Depth": 2, "OpeningWidth": 4, "OpeningHeight": 6.67 }
